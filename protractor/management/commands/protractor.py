@@ -30,6 +30,12 @@ class Command(BaseCommand):
             default='runserver',
             help='Specify which command you want to run a server'
         ),
+        make_option('--direct-connect',
+            action='store_true',
+            dest='direct_connect',
+            default=False,
+            help='Do not start a selenium webdriver server because you are using protractor directConnect'
+        ),
         make_option('--specs',
             action='store',
             dest='specs',
@@ -57,7 +63,8 @@ class Command(BaseCommand):
             raise IOError("Could not find '{}'"
                 .format(options['protractor_conf']))
 
-        self.run_webdriver()
+        if not options["direct_connect"]:
+            self.run_webdriver()
 
         old_config = self.setup_databases(options)
 

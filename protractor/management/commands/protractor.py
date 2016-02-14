@@ -5,12 +5,14 @@ import sys
 from multiprocessing import Process
 from optparse import make_option
 import subprocess
-
+import socket
 
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import connection
 from django.test.runner import setup_databases
+from django.test.testcases import QuietWSGIRequestHandler
+from django.core.servers.basehttp import WSGIServer
 
 
 class Command(BaseCommand):
@@ -75,7 +77,10 @@ class Command(BaseCommand):
 
         if options['addrport'] is None:
             options['addrport'] = os.environ.get(
-                    'DJANGO_LIVE_TEST_SERVER_ADDRESS', '8081')
+                    'DJANGO_LIVE_TEST_SERVER_ADDRESS', 'localhost:8081')
+        host, possible_ports = self.parse_addr(options['addrport'])
+        print(host, possible_ports)
+        options['addrport'] = "{}:{}".format(host, self.choose_port(host, possible_ports))
 
         test_server_process = Process(target=self.runserver, args=(options,))
         test_server_process.daemon = True
@@ -120,6 +125,42 @@ class Command(BaseCommand):
         for connection, old_name, destroy in old_names:
             if destroy:
                 connection.creation.destroy_test_db(old_name, options['verbosity'])
+
+    def parse_addr(self, specified_address):
+        """Parse the --addrport argument into a host/IP address and port range"""
+        # This code is based on
+        # django.test.testcases.LiveServerTestCase.setUpClass
+
+        # The specified ports may be of the form '8000-8010,8080,9200-9300'
+        # i.e. a comma-separated list of ports or ranges of ports, so we break
+        # it down into a detailed list of all possible ports.
+        possible_ports = []
+        try:
+            host, port_ranges = specified_address.split(':')
+            for port_range in port_ranges.split(','):
+                # A port range can be of either form: '8000' or '8000-8010'.
+                extremes = list(map(int, port_range.split('-')))
+                assert len(extremes) in (1, 2)
+                if len(extremes) == 1:
+                    # Port range of the form '8000'
+                    possible_ports.append(extremes[0])
+                else:
+                    # Port range of the form '8000-8010'
+                    for port in range(extremes[0], extremes[1] + 1):
+                        possible_ports.append(port)
+        except Exception:
+            raise Exception(
+                'Invalid address ("%s") for live server.' % specified_address)
+
+        return host, possible_ports
+
+    def choose_port(self, host, possible_ports):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        for port in possible_ports:
+            result = sock.connect_ex((host, port))
+            if result != 0:
+                return port
+        raise OSError("Could not find an open port")
 
     def runserver(self, options):
         use_threading = connection.features.test_db_allows_multiple_connections

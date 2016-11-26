@@ -52,7 +52,7 @@ class Command(BaseCommand):
             help='Specify if direct connect is enabled (do not spawn a webdriver)'),
         make_option('--npm-prefix', action='store', dest='npm_prefix',
             type='string',
-            help='If protractor is installed locally, provide the path to the node_modules'),
+            help='If protractor is installed locally, provide the path to the node_modules folder'),
     )
 
     def handle(self, *args, **options):

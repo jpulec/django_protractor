@@ -3,9 +3,9 @@
 import os
 import subprocess
 
-
 class ProtractorTestCaseMixin(object):
     protractor_conf = 'protractor.conf.js'
+    npm_prefix = None
     suite = None
     specs = None
 
@@ -29,7 +29,13 @@ class ProtractorTestCaseMixin(object):
         }
 
     def test_run(self):
-        protractor_command = 'protractor {}'.format(self.protractor_conf)
+        command_prefix = ''
+        npm_prefix = self.npm_prefix
+        if (npm_prefix):
+            npm_prefix = 'npm run --prefix={} '.format(npm_prefix)
+        protractor_command = npm_prefix + 'protractor ' + os.getcwd() + '/{}'.format(self.protractor_conf)
+        if (npm_prefix):
+            protractor_command += ' -- '
         protractor_command += ' --baseUrl {}'.format(self.live_server_url)
         if self.specs:
             protractor_command += ' --specs {}'.format(','.join(self.specs))

@@ -48,6 +48,11 @@ class Command(BaseCommand):
         make_option('--addrport', action='store', dest='addrport',
             type='string',
             help='port number or ipaddr:port to run the server on'),
+        make_option('--direct-connect', action='store_true', dest='direct_connect',
+            help='Specify if direct connect is enabled (do not spawn a webdriver)'),
+        make_option('--npm-prefix', action='store', dest='npm_prefix',
+            type='string',
+            help='If protractor is installed locally, provide the path to the node_modules'),
     )
 
     def handle(self, *args, **options):
@@ -57,7 +62,8 @@ class Command(BaseCommand):
             raise IOError("Could not find '{}'"
                 .format(options['protractor_conf']))
 
-        self.run_webdriver()
+        if (not options['direct_connect']):
+            self.run_webdriver()
 
         old_config = self.setup_databases(options)
 
@@ -83,7 +89,13 @@ class Command(BaseCommand):
             'live_server_url': live_server_url
         }
 
-        protractor_command = 'protractor {}'.format(options['protractor_conf'])
+        command_prefix = ''
+        npm_prefix = options['npm_prefix']
+        if (npm_prefix):
+            npm_prefix = 'npm run --prefix={} '.format(npm_prefix)
+        protractor_command = npm_prefix + 'protractor ' + os.getcwd() + '/{}'.format(options['protractor_conf'])
+        if (npm_prefix):
+            protractor_command += ' -- '
         protractor_command += ' --baseUrl {}'.format(live_server_url)
         if options['specs']:
             protractor_command += ' --specs {}'.format(options['specs'])

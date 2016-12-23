@@ -2,6 +2,19 @@
 
 import os
 import subprocess
+try:
+    from urllib.request import urlopen
+    from urllib.error import URLError
+except ImportError:
+    from urllib2 import urlopen, URLError
+
+
+def internet_on():
+    try:
+        urlopen('http://216.58.192.142', timeout=1)
+        return True
+    except URLError:
+        return False
 
 
 class ProtractorTestCaseMixin(object):
@@ -13,7 +26,8 @@ class ProtractorTestCaseMixin(object):
     def setUpClass(cls):
         super(ProtractorTestCaseMixin, cls).setUpClass()
         with open(os.devnull, 'wb') as f:
-            subprocess.call(['webdriver-manager', 'update'], stdout=f, stderr=f)
+            if internet_on():
+                subprocess.call(['webdriver-manager', 'update'], stdout=f, stderr=f)
             cls.webdriver = subprocess.Popen(
                 ['webdriver-manager', 'start'], stdout=f, stderr=f)
 
@@ -29,6 +43,9 @@ class ProtractorTestCaseMixin(object):
         }
 
     def test_run(self):
+        if not self.specs and not self.suite:
+            return
+
         protractor_command = 'protractor {}'.format(self.protractor_conf)
         protractor_command += ' --baseUrl {}'.format(self.live_server_url)
         if self.specs:

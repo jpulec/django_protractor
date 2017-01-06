@@ -2,11 +2,14 @@
 
 import os
 import subprocess
+from unittest import skipUnless
 try:
     from urllib.request import urlopen
     from urllib.error import URLError
 except ImportError:
     from urllib2 import urlopen, URLError
+
+gotWebdriverManager = os.path.exists('/usr/bin/webdriver-manager')
 
 
 def internet_on():
@@ -23,6 +26,7 @@ class ProtractorTestCaseMixin(object):
     specs = None
 
     @classmethod
+    @skipUnless(gotWebdriverManager, 'skipping protractor e2e tests')
     def setUpClass(cls):
         super(ProtractorTestCaseMixin, cls).setUpClass()
         with open(os.devnull, 'wb') as f:
@@ -32,6 +36,7 @@ class ProtractorTestCaseMixin(object):
                 ['webdriver-manager', 'start'], stdout=f, stderr=f)
 
     @classmethod
+    @skipUnless(gotWebdriverManager, 'skipping protractor e2e tests')
     def tearDownClass(cls):
         cls.webdriver.kill()
         super(ProtractorTestCaseMixin, cls).tearDownClass()
@@ -42,6 +47,7 @@ class ProtractorTestCaseMixin(object):
             'live_server_url': self.live_server_url
         }
 
+    @skipUnless(gotWebdriverManager, 'skipping protractor e2e tests')
     def test_run(self):
         if not self.specs and not self.suite:
             return
